@@ -1,0 +1,67 @@
+# Cube Agree C:62 Race 2026 price monitor — GitHub Actions workflow
+#
+# Placement in your repository:
+#   .github/workflows/monitor.yml
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   TELEGRAM_BOT_TOKEN
+#   TELEGRAM_CHAT_ID
+#
+# How it works: runs every 30 minutes on GitHub's runners, scrapes the shops,
+# sends Telegram alerts on changes, then commits price_state.json back to the
+# repo so the next run remembers the previous prices (runners are ephemeral).
+
+name: Bike price monitor
+
+on:
+  schedule:
+    # Twice daily: ~8am and ~8pm Melbourne time (AEDT, UTC+11).
+    # GitHub cron is UTC, and runs may be delayed a few minutes under load.
+    - cron: "0 9,21 * * *"
+  workflow_dispatch:            # adds a manual "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write               # allow committing the state file back to the repo
+
+concurrency:
+  group: price-monitor          # never run two checks at the same time
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip            # caches pip packages between runs
+
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run price check
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python cube_agree_price_monitor.py --once
+
+      - name: Commit updated price state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add price_state.json
+          git diff --cached --quiet || git commit -m "Update price state [skip ci]"
+          git push
