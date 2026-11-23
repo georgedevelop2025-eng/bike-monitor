@@ -14,10 +14,13 @@ SETUP
 2.  Create a Telegram bot via @BotFather and copy the bot token.
 3.  Message your bot once, then get your chat id from:
         https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
-    (or ask @userinfobot for your personal chat id)
+    (or ask @userinfobot for your personal chat id). Every recipient
+    must press Start on the bot at least once, or Telegram blocks delivery.
 4.  Export credentials (preferred over editing this file):
         export TELEGRAM_BOT_TOKEN="123456:ABC..."
         export TELEGRAM_CHAT_ID="123456789"
+    Multiple recipients: comma-separate the chat IDs, e.g.
+        export TELEGRAM_CHAT_ID="803976081,9060007392"
 5.  Verify everything works:         python3 cube_agree_price_monitor.py --test-telegram
     Inspect what the scraper sees:   python3 cube_agree_price_monitor.py --probe
     Run one check pass (for cron):   python3 cube_agree_price_monitor.py --once
@@ -72,7 +75,13 @@ from bs4 import BeautifulSoup
 # --------------------------------------------------------------------------
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+# Comma-separated list of Telegram chat IDs that receive alerts.
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "803976081,9060007392")
+
+
+def _chat_ids() -> list[str]:
+    """Parse the comma-separated TELEGRAM_CHAT_ID setting."""
+    return [cid.strip() for cid in TELEGRAM_CHAT_ID.split(",") if cid.strip()]
 
 CHECK_INTERVAL_MINUTES = 60                 # default loop interval
 STATE_FILE = Path(__file__).with_name("price_state.json")
@@ -302,7 +311,7 @@ def parse_price(raw: str) -> float | None:
     m = re.search(r"\d[\d.,\s]*", text)
     if not m:
         return None
-    num = m.group(0).replace(" ", "").replace(" ", "")
+    num = m.group(0).replace(" ", "").replace(" ", "")
     last_dot, last_comma = num.rfind("."), num.rfind(",")
     if last_dot > -1 and last_comma > -1:          # both present: rightmost = decimal
         if last_dot > last_comma:                  # 5,999.00
@@ -440,21 +449,25 @@ def save_state(state: dict) -> None:
 
 
 def send_telegram(text: str) -> bool:
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+    """Send a message to every configured chat ID. True if all succeeded."""
+    chat_ids = _chat_ids()
+    if not TELEGRAM_BOT_TOKEN or not chat_ids:
         logging.error("Telegram credentials not set — message not sent:\n%s", text)
         return False
-    try:
-        resp = session.post(
-            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-            json={"chat_id": TELEGRAM_CHAT_ID, "text": text,
-                  "disable_web_page_preview": True},
-            timeout=15,
-        )
-        resp.raise_for_status()
-        return True
-    except requests.RequestException as exc:
-        logging.error("Telegram send failed: %s", exc)
-        return False
+    all_ok = True
+    for chat_id in chat_ids:
+        try:
+            resp = session.post(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                json={"chat_id": chat_id, "text": text,
+                      "disable_web_page_preview": True},
+                timeout=15,
+            )
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            logging.error("Telegram send to chat %s failed: %s", chat_id, exc)
+            all_ok = False
+    return all_ok
 
 
 def fmt_price(value: float, currency: str) -> str:
