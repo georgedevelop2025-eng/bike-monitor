@@ -15,9 +15,11 @@ name: Bike price monitor
 
 on:
   schedule:
-    # Twice daily: ~8am and ~8pm Melbourne time (AEDT, UTC+11).
-    # GitHub cron is UTC, and runs may be delayed a few minutes under load.
-    - cron: "0 9,21 * * *"
+    # Twice daily: 9:00 AM and 5:00 PM Sydney time.
+    # GitHub cron is UTC; Sydney is UTC+11 during daylight saving (Oct-Apr),
+    # so 9am/5pm AEDT = 22:00/06:00 UTC. When daylight saving ends in April
+    # (Sydney -> UTC+10), runs shift to 10am/6pm local — adjust then if needed.
+    - cron: "0 6,22 * * *"
   workflow_dispatch:            # adds a manual "Run workflow" button in the Actions tab
 
 permissions:
