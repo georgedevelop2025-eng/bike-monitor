@@ -1,0 +1,45 @@
+{
+  "sites": {
+    "https://99bikes.com.au/products/cube-agree-c-62-race-color-1": {
+      "price": 5999.0,
+      "currency": "AUD",
+      "availability": "SM: in stock",
+      "checked_at": "2026-11-23T05:36:18+00:00",
+      "error": null
+    },
+    "https://www.bikezonefitzroy.com.au/products/26-agree-c-62": {
+      "price": 4845.0,
+      "currency": "AUD",
+      "availability": "WHITE/BLACK / SM: sold out",
+      "checked_at": "2026-11-23T05:36:18+00:00",
+      "error": null
+    },
+    "https://valhallacyclery.com.au/products/agree-c-62-race-cube-bikes": {
+      "price": 4950.0,
+      "currency": "AUD",
+      "availability": "53cm / Gold Coast Showroom - Pickup/Immediate Shipping: in stock; 53cm / Supplier Warehouse - Allow 3-5 Days Shipping: sold out",
+      "checked_at": "2026-11-23T05:36:18+00:00",
+      "error": null
+    }
+  },
+  "history": [
+    {
+      "ts": "2026-11-23T05:36:18+00:00",
+      "site": "99 Bikes (AU)",
+      "price": 5999.0,
+      "availability": "SM: in stock"
+    },
+    {
+      "ts": "2026-11-23T05:36:18+00:00",
+      "site": "Bike Zone Fitzroy (AU)",
+      "price": 4845.0,
+      "availability": "WHITE/BLACK / SM: sold out"
+    },
+    {
+      "ts": "2026-11-23T05:36:18+00:00",
+      "site": "Valhalla Cyclery (AU)",
+      "price": 4950.0,
+      "availability": "53cm / Gold Coast Showroom - Pickup/Immediate Shipping: in stock; 53cm / Supplier Warehouse - Allow 3-5 Days Shipping: sold out"
+    }
+  ]
+}
