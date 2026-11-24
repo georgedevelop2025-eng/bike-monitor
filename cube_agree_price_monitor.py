@@ -448,11 +448,16 @@ def save_state(state: dict) -> None:
     STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+_TELEGRAM_FAILURES = 0
+
+
 def send_telegram(text: str) -> bool:
     """Send a message to every configured chat ID. True if all succeeded."""
+    global _TELEGRAM_FAILURES
     chat_ids = _chat_ids()
     if not TELEGRAM_BOT_TOKEN or not chat_ids:
         logging.error("Telegram credentials not set — message not sent:\n%s", text)
+        _TELEGRAM_FAILURES += 1
         return False
     all_ok = True
     for chat_id in chat_ids:
@@ -467,6 +472,8 @@ def send_telegram(text: str) -> bool:
         except requests.RequestException as exc:
             logging.error("Telegram send to chat %s failed: %s", chat_id, exc)
             all_ok = False
+    if not all_ok:
+        _TELEGRAM_FAILURES += 1
     return all_ok
 
 
@@ -587,6 +594,10 @@ def main() -> None:
 
     if args.once:
         run_once()
+        if _TELEGRAM_FAILURES:
+            sys.exit("ERROR: one or more Telegram messages could not be delivered "
+                     "— check TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID "
+                     "(repo Secrets when running on GitHub Actions).")
         return
 
     logging.info("Starting monitor loop (every %d min). Ctrl+C to stop.", args.interval)
